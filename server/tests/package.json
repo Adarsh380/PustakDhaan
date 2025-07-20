@@ -1,0 +1,36 @@
+{
+  "name": "pustakdhaan-server-tests",
+  "version": "1.0.0",
+  "description": "Test suite for PustakDhaan book allocation logic",
+  "scripts": {
+    "test": "jest --detectOpenHandles --forceExit",
+    "test:watch": "jest --watch --detectOpenHandles",
+    "test:coverage": "jest --coverage --detectOpenHandles --forceExit",
+    "test:allocation": "jest allocation.test.js --detectOpenHandles --forceExit",
+    "test:integration": "jest allocation.integration.test.js --detectOpenHandles --forceExit",
+    "test:edge-cases": "jest allocation.edge-cases.test.js --detectOpenHandles --forceExit",
+    "test:model": "jest allocation.model.test.js --detectOpenHandles --forceExit",
+    "test:business-logic": "jest allocation.business-logic.test.js --detectOpenHandles --forceExit"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "@types/jest": "^29.5.5"
+  },
+  "dependencies": {
+    "mongoose": "^7.5.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/setup.js"],
+    "testMatch": ["**/*.test.js"],
+    "collectCoverageFrom": [
+      "../routes/**/*.js",
+      "../models/**/*.js",
+      "!**/node_modules/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"]
+  }
+}
