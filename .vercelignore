@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Development files
+client/src/
+server/tests/
+client/tests/
+*.test.js
+*.test.jsx
+
+# Environment files (these should be configured in Vercel dashboard)
+.env
+.env.local
+.env.development
+.env.production
+
+# Build artifacts
+client/dist/
+server/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+client/README.md
+
+# Config files that aren't needed in production
+jest.config.js
+jest.config.cjs
+babel.config.json
+eslint.config.js
+tailwind.config.js
+postcss.config.js
+vite.config.js
+
+# Cleanup scripts
+cleanup.js
+cleanupCollections.js
+seed.js
