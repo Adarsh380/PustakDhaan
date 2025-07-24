@@ -143,9 +143,38 @@ router.post('/allocate', authenticateToken, async (req, res) => {
     }
 
     // Save updated allocatedCount for each used donation
+
+    // Save updated allocatedCount for each used donation
+    // Also, collect unique donor IDs from the used donations
+    const donorIdsSet = new Set();
     for (const donationId of donationsUsed) {
       const donation = donationRecords.find(d => d._id.equals(donationId));
-      await donation.save();
+      if (donation) {
+        // Ensure allocatedCount is always present and up-to-date
+        donation.allocatedCount = donation.allocatedCount || { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+        await donation.save();
+        if (donation.donor) {
+          donorIdsSet.add(donation.donor.toString());
+        }
+      }
+    }
+
+    // For each donor whose books were allocated, recalculate totalBooksDonatted and update badge
+    for (const donorId of donorIdsSet) {
+      // Sum all books allocated from this donor's donations
+      const donorDonations = await DonationRecord.find({ donor: donorId });
+      let totalAllocated = 0;
+      for (const d of donorDonations) {
+        if (d.allocatedCount) {
+          totalAllocated += Object.values(d.allocatedCount).reduce((sum, n) => sum + (n || 0), 0);
+        }
+      }
+      const donor = await User.findById(donorId);
+      if (donor) {
+        donor.totalBooksDonatted = totalAllocated;
+        donor.updateBadge();
+        await donor.save();
+      }
     }
 
     const allocation = new BookAllocation({

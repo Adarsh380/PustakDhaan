@@ -58,7 +58,6 @@ router.post('/submit', authenticateToken, async (req, res) => {
     // Update donor's total books and badge
     const donor = await User.findById(req.user.userId);
     donor.totalBooksDonatted += totalBooks;
-    donor.updateBadge();
     await donor.save();
 
     // Update donation drive totals
@@ -111,12 +110,24 @@ router.get('/all', authenticateToken, async (req, res) => {
 // Get user's donations
 router.get('/my-donations', authenticateToken, async (req, res) => {
   try {
+    // Get the donor with badge
+    const donor = await User.findById(req.user.userId);
     const donations = await DonationRecord.find({ donor: req.user.userId })
       .populate('donor', 'name email badge')
       .populate('donationDrive', 'name location gatedCommunity coordinator')
       .sort({ createdAt: -1 });
 
-    res.json(donations);
+    // Attach badge and up-to-date allocatedCount to each donation
+    const donationsWithBadge = donations.map(donation => {
+      // Ensure allocatedCount is present and up-to-date
+      return {
+        ...donation.toObject(),
+        donorBadge: donor.badge,
+        allocatedCount: donation.allocatedCount || { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 }
+      };
+    });
+
+    res.json(donationsWithBadge);
   } catch (error) {
     console.error('Error fetching user donations:', error);
     res.status(500).json({ message: 'Server error' });
