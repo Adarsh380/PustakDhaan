@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "jest --no-cache",
     "test:watch": "jest --watch --no-cache",
-    "test:coverage": "jest --coverage --no-cache"
+    "test:coverage": "jest --coverage --no-cache",
+    "postinstall": "npm install --legacy-peer-deps"
   },
   "proxy": "http://localhost:5000",
   "dependencies": {
