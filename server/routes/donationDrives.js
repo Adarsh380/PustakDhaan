@@ -23,6 +23,7 @@ const authenticateToken = (req, res, next) => {
 
 // Create new donation drive (admin only)
 router.post('/create', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -72,6 +73,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 
 // Get all active donation drives
 router.get('/active', async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const drives = await BookDonationDrive.find({ status: 'active' })
       .populate('coordinator', 'name email phone')
@@ -87,6 +89,7 @@ router.get('/active', async (req, res) => {
 
 // Get all donation drives (admin only)
 router.get('/all', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -107,6 +110,7 @@ router.get('/all', authenticateToken, async (req, res) => {
 
 // Public: Get all donation drives (any status)
 router.get('/', async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const drives = await BookDonationDrive.find()
       .populate('coordinator', 'name email phone')
@@ -120,6 +124,7 @@ router.get('/', async (req, res) => {
 
 // Get single donation drive
 router.get('/:id', async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const drive = await BookDonationDrive.findById(req.params.id)
       .populate('coordinator', 'name email phone')
@@ -138,6 +143,7 @@ router.get('/:id', async (req, res) => {
 
 // Update donation drive (admin only)
 router.put('/:id', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -172,6 +178,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
 // Delete donation drive (admin only)
 router.delete('/:id', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {

@@ -8,10 +8,8 @@ const mongoose = require('mongoose');
 // Register
 router.post('/register', async (req, res) => {
   try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const { name, email, password, phone, address, role } = req.body;
-
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan', {
-        });
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -56,8 +54,8 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const { email, password } = req.body;
-
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
@@ -96,19 +94,16 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', async (req, res) => {
   try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
     const user = await User.findById(decoded.userId).select('-password');
-    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
     res.json(user);
   } catch (error) {
     console.error('Get user error:', error);
@@ -119,19 +114,16 @@ router.get('/me', async (req, res) => {
 // Get all users (admin only)
 router.get('/users', async (req, res) => {
   try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
     const currentUser = await User.findById(decoded.userId);
-    
     if (!currentUser || currentUser.role !== 'admin') {
       return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
-
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
@@ -142,6 +134,7 @@ router.get('/users', async (req, res) => {
 
 // Forgot Password - send reset link
 router.post('/forgot-password', async (req, res) => {
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: 'Email is required' });
   const user = await User.findOne({ email });
@@ -190,6 +183,7 @@ router.post('/forgot-password', async (req, res) => {
 
 // Reset Password
 router.post('/reset-password', async (req, res) => {
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   const { token, newPassword } = req.body;
   if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password are required' });
   try {

@@ -6,6 +6,7 @@ const authenticateToken = require('../middleware/authenticateToken');
 
 // Get schools where this donor's books were allocated
 router.get('/my-allocations', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const donorId = req.user.userId;
     const donations = await DonationRecord.find({ donor: donorId });

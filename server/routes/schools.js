@@ -23,6 +23,7 @@ const authenticateToken = (req, res, next) => {
 
 // Create new school (admin only)
 router.post('/create', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -59,6 +60,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 
 // Get all schools
 router.get('/all', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -77,6 +79,7 @@ router.get('/all', authenticateToken, async (req, res) => {
 
 // Get single school
 router.get('/:id', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -97,6 +100,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // Update school (admin only)
 router.put('/:id', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -129,6 +133,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
 // Delete school (admin only)
 router.delete('/:id', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {

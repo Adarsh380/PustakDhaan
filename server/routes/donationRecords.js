@@ -24,6 +24,7 @@ const authenticateToken = (req, res, next) => {
 
 // Submit a donation
 router.post('/submit', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const { donationDriveId, donationDate, booksCount } = req.body;
 
@@ -89,6 +90,7 @@ router.post('/submit', authenticateToken, async (req, res) => {
 
 // Get all donations (for admin)
 router.get('/all', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -109,6 +111,7 @@ router.get('/all', authenticateToken, async (req, res) => {
 
 // Get user's donations
 router.get('/my-donations', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     // Get the donor with badge
     const donor = await User.findById(req.user.userId);
@@ -136,6 +139,7 @@ router.get('/my-donations', authenticateToken, async (req, res) => {
 
 // Update donation status (for coordinators/admins)
 router.put('/:id/status', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const { status } = req.body;
     const user = await User.findById(req.user.userId);
@@ -169,6 +173,7 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
 
 // Utility endpoint to recalculate drive totals (Admin only)
 router.post('/recalculate-totals', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {

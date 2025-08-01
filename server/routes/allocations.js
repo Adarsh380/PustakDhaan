@@ -26,6 +26,7 @@ const authenticateToken = (req, res, next) => {
 
 // Get all donors and their donations for a given drive (admin only)
 router.get('/donors/by-drive/:driveId', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -58,6 +59,7 @@ router.get('/donors/by-drive/:driveId', authenticateToken, async (req, res) => {
 
 // Allocate books to school (admin only)
 router.post('/allocate', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -216,6 +218,7 @@ router.post('/allocate', authenticateToken, async (req, res) => {
 
 // Get all allocations
 router.get('/all', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -237,6 +240,7 @@ router.get('/all', authenticateToken, async (req, res) => {
 
 // Get allocations by donation drive
 router.get('/by-drive/:driveId', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -257,6 +261,7 @@ router.get('/by-drive/:driveId', authenticateToken, async (req, res) => {
 
 // Get allocations by school
 router.get('/by-school/:schoolId', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
@@ -277,6 +282,7 @@ router.get('/by-school/:schoolId', authenticateToken, async (req, res) => {
 
 // Update allocation status
 router.put('/:id/status', authenticateToken, async (req, res) => {
+  await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
     const user = await User.findById(req.user.userId);
     if (user.role !== 'admin') {
