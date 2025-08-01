@@ -25,11 +25,9 @@ let isConnected = false;
 async function connectDB() {
   if (!isConnected) {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     });
     isConnected = true;
-    console.log('MongoDB connected successfully');
+    console.log('MongoDB connected successfully!!');
   }
 }
 

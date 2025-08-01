@@ -23,10 +23,8 @@ app.use('/api/donor', require('./routes/donorAllocations'));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected successfully'))
+.then(() => console.log('MongoDB connected successfully!'))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // Basic route
