@@ -9,6 +9,8 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, address, role } = req.body;
 
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan', {
+        });
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
