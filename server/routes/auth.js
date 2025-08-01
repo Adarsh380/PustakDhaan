@@ -9,8 +9,6 @@ router.post('/register', async (req, res) => {
   try {
     const { name, email, password, phone, address, role } = req.body;
 
-    console.log(process.env.MONGODB_URI);
-    
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
