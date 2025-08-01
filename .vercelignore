@@ -16,7 +16,6 @@ client/tests/
 .env.production
 
 # Build artifacts
-client/dist/
 server/dist/
 
 # Logs
