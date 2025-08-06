@@ -70,25 +70,24 @@ function DonateBooks({ setUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+    if (submitting) return; // Prevent double submit
+    setSubmitting(true)
     setSubmitMessage({ type: '', text: '' }) // Clear previous messages
-    
     if (!selectedDrive) {
       setSubmitMessage({ type: 'error', text: 'Please select a donation drive' })
+      setSubmitting(false)
       return
     }
-
     if (!donationDate) {
       setSubmitMessage({ type: 'error', text: 'Please select a donation date' })
+      setSubmitting(false)
       return
     }
-
     if (getTotalBooks() === 0) {
       setSubmitMessage({ type: 'error', text: 'Please enter at least one book to donate' })
+      setSubmitting(false)
       return
     }
-
-    setSubmitting(true)
 
     try {
       const token = localStorage.getItem('token')

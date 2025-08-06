@@ -460,7 +460,7 @@ function AdminDashboard() {
                         {drive.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {drive.location}
+                        {drive.gatedCommunity}, {drive.location}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {drive.coordinator.name}

@@ -115,7 +115,7 @@ function MyDonations() {
                     {donation.donationDrive.name}
                   </h3>
                   <p className="text-gray-600">
-                    {donation.donationDrive.location} - {donation.donationDrive.gatedCommunity}
+                    {donation.donationDrive.gatedCommunity}, {donation.donationDrive.location}
                   </p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(donation.status)}`}>
