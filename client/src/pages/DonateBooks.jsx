@@ -213,11 +213,11 @@ function DonateBooks({ setUser }) {
                 loading="lazy"
                 allowFullScreen
                 referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps?q=${encodeURIComponent(driveDetails.location)}&output=embed`}
+                src={`https://www.google.com/maps?q=${encodeURIComponent(`${driveDetails.gatedCommunity}, ${driveDetails.location}`)}&output=embed`}
               ></iframe>
               <div className="mt-2">
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(driveDetails.location)}`}
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${driveDetails.gatedCommunity}, ${driveDetails.location}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 underline"
