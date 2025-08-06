@@ -40,6 +40,11 @@ router.post('/create', authenticateToken, async (req, res) => {
         }
       : { name: '', phone: '', email: '' };
 
+    const now = new Date();
+    const end = endDate ? new Date(endDate) : null;
+    if (!end || end < now) {
+      return res.status(400).json({ message: 'End date must be in the future.' });
+    }
     const donationDrive = new BookDonationDrive({
       name,
       description,
@@ -48,7 +53,7 @@ router.post('/create', authenticateToken, async (req, res) => {
       coordinator: coordinatorObj,
       administrator: req.user.userId,
       startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : null
+      endDate: end
     });
 
     await donationDrive.save();
@@ -68,14 +73,17 @@ router.post('/create', authenticateToken, async (req, res) => {
 router.get('/active', async (req, res) => {
   await require('mongoose').connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
   try {
-    const drives = await BookDonationDrive.find({ status: 'active' })
+    const now = new Date();
+    const drives = await BookDonationDrive.find({ endDate: { $gt: now } })
       .populate('administrator', 'name email')
       .sort({ createdAt: -1 });
-    // Always return coordinator as an object
-    res.json(drives.map(d => ({
-      ...d.toObject(),
-      coordinator: d.coordinator || { name: '', phone: '', email: '' }
-    })));
+    const result = drives.map(d => {
+      const obj = d.toObject();
+      obj.status = obj.endDate && new Date(obj.endDate) > now ? 'active' : 'closed';
+      obj.coordinator = obj.coordinator || { name: '', phone: '', email: '' };
+      return obj;
+});
+res.json(result);
   } catch (error) {
     console.error('Error fetching active drives:', error);
     res.status(500).json({ message: 'Server error' });
@@ -167,8 +175,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
         drive[key] = updates[key];
       }
     });
+    const now = new Date();
+    const end = drive.endDate ? new Date(drive.endDate) : null;
+    if (!end || end < now) {
+      return res.status(400).json({ message: 'End date must be in the future.' });
+    }
     await drive.save();
-    // Always return a single-line message for update
     res.json({
       message: 'Donation drive updated successfully',
       donationDrive: {
@@ -204,7 +216,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
 
     await BookDonationDrive.findByIdAndDelete(req.params.id);
-    // Always return a single-line message for delete
+
     res.json({ message: 'Donation drive deleted successfully' });
   } catch (error) {
     console.error('Error deleting donation drive:', error);
