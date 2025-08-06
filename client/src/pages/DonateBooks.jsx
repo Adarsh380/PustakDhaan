@@ -62,6 +62,7 @@ function DonateBooks({ setUser }) {
       ...prev,
       [category]: isNaN(numValue) ? 0 : numValue
     }))
+    if (submitMessage.text) setSubmitMessage({ type: '', text: '' });
   }
 
   const getTotalBooks = () => {
@@ -152,7 +153,8 @@ function DonateBooks({ setUser }) {
             </label>
             <select
               value={selectedDrive}
-              onChange={(e) => setSelectedDrive(e.target.value)}
+              onChange={(e) => { setSelectedDrive(e.target.value); if (submitMessage.text) setSubmitMessage({ type: '', text: '' }); }}
+              onFocus={() => { if (submitMessage.text) setSubmitMessage({ type: '', text: '' }); }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             >
@@ -172,7 +174,8 @@ function DonateBooks({ setUser }) {
             <input
               type="date"
               value={donationDate}
-              onChange={(e) => setDonationDate(e.target.value)}
+              onChange={(e) => { setDonationDate(e.target.value); if (submitMessage.text) setSubmitMessage({ type: '', text: '' }); }}
+              onFocus={() => { if (submitMessage.text) setSubmitMessage({ type: '', text: '' }); }}
               min={new Date().toISOString().split('T')[0]}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
@@ -240,11 +243,12 @@ function DonateBooks({ setUser }) {
                   type="number"
                   min="0"
                   value={count === 0 ? '' : count}
-                  onChange={(e) => handleBookCountChange(category, e.target.value)}
+                  onChange={(e) => { handleBookCountChange(category, e.target.value); }}
                   onFocus={(e) => {
                     if (e.target.value === '0') {
                       e.target.select();
                     }
+                    if (submitMessage.text) setSubmitMessage({ type: '', text: '' });
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -269,7 +273,7 @@ function DonateBooks({ setUser }) {
           </ul>
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex items-center justify-end gap-4">
           <button
             type="submit"
             disabled={submitting}
@@ -277,13 +281,10 @@ function DonateBooks({ setUser }) {
           >
             {submitting ? 'Submitting...' : 'Submit Donation'}
           </button>
+          {submitMessage.text && (
+            <span className={`p-2 rounded-md text-sm ${submitMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>{submitMessage.text}</span>
+          )}
         </div>
-
-        {submitMessage.text && (
-          <div className={`mt-4 p-4 rounded-md text-sm ${submitMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-            {submitMessage.text}
-          </div>
-        )}
       </form>
     </div>
   )

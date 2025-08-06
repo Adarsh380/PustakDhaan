@@ -11,6 +11,7 @@ function AdminDashboard() {
   const [coordinators, setCoordinators] = useState([])
   const [donorBooks, setDonorBooks] = useState({ '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 });
   const [loading, setLoading] = useState(true)
+  const [creatingDrive, setCreatingDrive] = useState(false)
 
   // Message states for form submissions
   const [driveMessage, setDriveMessage] = useState({ type: '', text: '' })
@@ -26,7 +27,11 @@ function AdminDashboard() {
     coordinator: { name: '', phone: '', email: '' },
     startDate: '',
     endDate: ''
-  })
+  });
+  // New state for edit/delete features
+  const [editingDriveId, setEditingDriveId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [deleteMessage, setDeleteMessage] = useState({ type: '', text: '' });
 
   const [schoolForm, setSchoolForm] = useState({
     name: '',
@@ -130,10 +135,12 @@ function AdminDashboard() {
   }
 
   const handleCreateDrive = async (e) => {
-    e.preventDefault()
-    setDriveMessage({ type: '', text: '' }) // Clear previous messages
+    e.preventDefault();
+    if (creatingDrive) return;
+    setCreatingDrive(true);
+    setDriveMessage({ type: '', text: '' }); // Clear previous messages
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token');
       const response = await fetch('/api/drives/create', {
         method: 'POST',
         headers: {
@@ -141,10 +148,9 @@ function AdminDashboard() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(driveForm)
-      })
-
+      });
       if (response.ok) {
-        setDriveMessage({ type: 'success', text: 'Donation drive created successfully!' })
+        setDriveMessage({ type: 'success', text: 'Donation drive created successfully!' });
         setDriveForm({
           name: '',
           description: '',
@@ -153,16 +159,16 @@ function AdminDashboard() {
           coordinator: { name: '', phone: '', email: '' },
           startDate: '',
           endDate: ''
-        })
-        await fetchData()
-        setLoading(false)
+        });
+        await fetchData();
       } else {
-        const error = await response.json()
-        setDriveMessage({ type: 'error', text: error.message || 'Failed to create drive' })
+        const error = await response.json();
+        setDriveMessage({ type: 'error', text: error.message || 'Failed to create drive' });
       }
     } catch (error) {
-      console.error('Error creating drive:', error)
-      setDriveMessage({ type: 'error', text: 'Failed to create drive' })
+      setDriveMessage({ type: 'error', text: 'Failed to create drive' });
+    } finally {
+      setCreatingDrive(false);
     }
   }
 
@@ -302,9 +308,6 @@ function AdminDashboard() {
               Manage donation drives, schools, and book allocations.
             </p>
           </div>
-          <div className="flex gap-2">
-            {/* Removed Fix Data button as requested */}
-          </div>
         </div>
       </div>
 
@@ -338,6 +341,54 @@ function AdminDashboard() {
           {/* Create Drive Form */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Create New Donation Drive</h2>
+            {editingDriveId && editForm && (
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setDriveMessage({ type: '', text: '' });
+                  try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/drives/${editingDriveId}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                      },
+                      body: JSON.stringify(editForm)
+                    });
+                    if (response.ok) {
+                      setDriveMessage({ type: 'success', text: 'Donation drive updated successfully!' });
+                      setEditingDriveId(null);
+                      setEditForm(null);
+                      await fetchData();
+                    } else {
+                      const error = await response.json();
+                      setDriveMessage({ type: 'error', text: error.message || 'Failed to update drive' });
+                    }
+                  } catch (error) {
+                    setDriveMessage({ type: 'error', text: 'Failed to update drive' });
+                  }
+                }}
+                className="grid md:grid-cols-2 gap-4 mb-6"
+              >
+                <input type="text" placeholder="Drive Name" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="text" placeholder="Coordinator Name" value={editForm.coordinator.name} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, name: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="text" placeholder="Gated Community" value={editForm.gatedCommunity} onChange={e => setEditForm({ ...editForm, gatedCommunity: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="tel" placeholder="Coordinator Phone" value={editForm.coordinator.phone} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, phone: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="text" placeholder="Location" value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="email" placeholder="Coordinator Email" value={editForm.coordinator.email} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, email: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="date" value={editForm.startDate?.slice(0,10) || ''} onChange={e => setEditForm({ ...editForm, startDate: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                <input type="date" value={editForm.endDate?.slice(0,10) || ''} onChange={e => setEditForm({ ...editForm, endDate: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" />
+                <textarea placeholder="Description" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md md:col-span-2" rows="2" />
+                <div className="md:col-span-2 flex gap-2">
+                  <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Save</button>
+                  <button type="button" className="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500" onClick={() => { setEditingDriveId(null); setEditForm(null); }}>Cancel</button>
+                </div>
+                {driveMessage.text && (
+                  <div className={`mt-3 p-3 rounded-md md:col-span-2 ${driveMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>{driveMessage.text}</div>
+                )}
+              </form>
+            )}
             <form onSubmit={handleCreateDrive} className="grid md:grid-cols-2 gap-4">
               <div className="grid grid-cols-2 gap-2 md:col-span-2">
                 <input
@@ -411,21 +462,16 @@ function AdminDashboard() {
                 className="px-3 py-2 border border-gray-300 rounded-md md:col-span-2"
                 rows="2"
               />
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 md:col-span-2"
-              >
-                Create Drive
-              </button>
-              {driveMessage.text && (
-                <div className={`mt-3 p-3 rounded-md md:col-span-2 ${
-                  driveMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-800 border border-green-200' 
-                    : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
-                  {driveMessage.text}
-                </div>
-              )}
+              <div className="md:col-span-2 flex gap-2 mt-2">
+                <button
+                  type="submit"
+                  disabled={creatingDrive}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {creatingDrive ? 'Creating...' : 'Create Drive'}
+                </button>
+              </div>
+              {/* Message removed from here; will show only below the drives list */}
             </form>
           </div>
 
@@ -455,31 +501,128 @@ function AdminDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {drives.map(drive => (
-                    <tr key={drive._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {drive.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {drive.gatedCommunity}, {drive.location}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {drive.coordinator.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          drive.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {drive.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {drive.totalBooksReceived}
-                      </td>
-                    </tr>
+                    <React.Fragment key={drive._id}>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {drive.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {drive.gatedCommunity}, {drive.location}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {drive.coordinator.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            drive.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {drive.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {drive.totalBooksReceived}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            className="bg-yellow-500 text-white px-3 py-1 rounded mr-2 hover:bg-yellow-600"
+                            onClick={() => { setEditingDriveId(drive._id); setEditForm({ ...drive, coordinator: { ...drive.coordinator } }); setDriveMessage({ type: '', text: '' }); setDeleteMessage({ type: '', text: '' }); }}
+                          >Edit</button>
+                          <button
+                            className={`bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 ${drive.totalBooksReceived > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={drive.totalBooksReceived > 0}
+                            onClick={async () => {
+                              if (drive.totalBooksReceived > 0) return;
+                              if (!window.confirm('Are you sure you want to delete this drive? This action cannot be undone.')) return;
+                              setDriveMessage({ type: '', text: '' });
+                              setDeleteMessage({ type: '', text: '' });
+                              try {
+                                const token = localStorage.getItem('token');
+                                const response = await fetch(`/api/drives/${drive._id}`, {
+                                  method: 'DELETE',
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                const result = await response.json();
+                                if (response.ok) {
+                                  setDeleteMessage({ type: 'success', text: result.message });
+                                  await fetchData();
+                                } else {
+                                  setDeleteMessage({ type: 'error', text: result.message || 'Failed to delete drive' });
+                                }
+                              } catch (error) {
+                                setDeleteMessage({ type: 'error', text: 'Failed to delete drive' });
+                              }
+                            }}
+                          >Delete</button>
+                        </td>
+                      </tr>
+                      {editingDriveId === drive._id && editForm && (
+                        <tr>
+                          <td colSpan={6} className="bg-gray-50 px-6 py-4">
+                            <form
+                              onSubmit={async (e) => {
+                                e.preventDefault();
+                                setDriveMessage({ type: '', text: '' });
+                                try {
+                                  const token = localStorage.getItem('token');
+                                  const response = await fetch(`/api/drives/${editingDriveId}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                      'Content-Type': 'application/json',
+                                      Authorization: `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify(editForm)
+                                  });
+                                  if (response.ok) {
+                                    setDriveMessage({ type: 'success', text: 'Donation drive updated successfully!' });
+                                    setEditingDriveId(null);
+                                    setEditForm(null);
+                                    await fetchData();
+                                  } else {
+                                    const error = await response.json();
+                                    setDriveMessage({ type: 'error', text: error.message || 'Failed to update drive' });
+                                  }
+                                } catch (error) {
+                                  setDriveMessage({ type: 'error', text: 'Failed to update drive' });
+                                }
+                              }}
+                              className="grid md:grid-cols-2 gap-4 mb-6"
+                            >
+                              <input type="text" placeholder="Drive Name" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="text" placeholder="Coordinator Name" value={editForm.coordinator.name} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, name: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="text" placeholder="Gated Community" value={editForm.gatedCommunity} onChange={e => setEditForm({ ...editForm, gatedCommunity: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="tel" placeholder="Coordinator Phone" value={editForm.coordinator.phone} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, phone: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="text" placeholder="Location" value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="email" placeholder="Coordinator Email" value={editForm.coordinator.email} onChange={e => setEditForm({ ...editForm, coordinator: { ...editForm.coordinator, email: e.target.value } })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="date" value={editForm.startDate?.slice(0,10) || ''} onChange={e => setEditForm({ ...editForm, startDate: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" required />
+                              <input type="date" value={editForm.endDate?.slice(0,10) || ''} onChange={e => setEditForm({ ...editForm, endDate: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md" />
+                              <textarea placeholder="Description" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md md:col-span-2" rows="2" />
+                              <div className="md:col-span-2 flex gap-2 mt-2">
+                                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Save</button>
+                                <button type="button" className="bg-gray-400 text-white px-4 py-2 rounded-md hover:bg-gray-500" onClick={() => { setEditingDriveId(null); setEditForm(null); }}>Cancel</button>
+                              </div>
+                            </form>
+                            {driveMessage.text && (
+                              <div className={`mt-2 p-2 rounded text-sm ${driveMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                                {driveMessage.text}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
+            {/* Show driveMessage and deleteMessage below the list, one line only, overwrite on any operation */}
+            {(driveMessage.text || deleteMessage.text) && (
+              <div className="mt-4 text-sm">
+                <span className={`p-2 rounded-md ${driveMessage.type === 'success' || deleteMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}
+                  style={{ display: 'inline-block', minWidth: '200px', whiteSpace: 'nowrap' }}>
+                  {driveMessage.text || deleteMessage.text}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -675,16 +818,16 @@ function AdminDashboard() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      School Name
+                      Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Location
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact Person
+                      Coordinator
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Student Enrollment
+                      Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Books Received
@@ -735,7 +878,6 @@ function AdminDashboard() {
             >
               <option value="">Select Donation Drive</option>
               {drives.map(drive => {
-                // Calculate remaining books (total received minus already allocated)
                 const allocatedFromDrive = allocations
                   .filter(allocation => allocation.donationDrive._id === drive._id)
                   .reduce((sum, allocation) => sum + allocation.totalBooksAllocated, 0);
