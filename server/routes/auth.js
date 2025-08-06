@@ -10,6 +10,9 @@ router.post('/register', async (req, res) => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const { name, email, password, phone, address, role } = req.body;
+    if (!['admin', 'donor'].includes(role)) {
+      return res.status(400).json({ message: 'Role must be either admin or donor' });
+    }
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -23,7 +26,7 @@ router.post('/register', async (req, res) => {
       password,
       phone,
       address,
-      role: role || 'donor'
+      role
     });
 
     await user.save();

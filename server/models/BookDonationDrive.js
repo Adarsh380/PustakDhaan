@@ -21,9 +21,9 @@ const bookDonationDriveSchema = new mongoose.Schema({
     trim: true
   },
   coordinator: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    name: String,
+    phone: String,
+    email: String
   },
   administrator: {
     type: mongoose.Schema.Types.ObjectId,

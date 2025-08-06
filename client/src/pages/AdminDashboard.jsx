@@ -23,7 +23,7 @@ function AdminDashboard() {
     description: '',
     location: '',
     gatedCommunity: '',
-    coordinatorId: '',
+    coordinator: { name: '', phone: '', email: '' },
     startDate: '',
     endDate: ''
   })
@@ -150,11 +150,12 @@ function AdminDashboard() {
           description: '',
           location: '',
           gatedCommunity: '',
-          coordinatorId: '',
+          coordinator: { name: '', phone: '', email: '' },
           startDate: '',
           endDate: ''
         })
-        fetchData()
+        await fetchData()
+        setLoading(false)
       } else {
         const error = await response.json()
         setDriveMessage({ type: 'error', text: error.message || 'Failed to create drive' })
@@ -338,41 +339,56 @@ function AdminDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Create New Donation Drive</h2>
             <form onSubmit={handleCreateDrive} className="grid md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Drive Name"
-                value={driveForm.name}
-                onChange={(e) => setDriveForm({...driveForm, name: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-md"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Location"
-                value={driveForm.location}
-                onChange={(e) => setDriveForm({...driveForm, location: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-md"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Gated Community"
-                value={driveForm.gatedCommunity}
-                onChange={(e) => setDriveForm({...driveForm, gatedCommunity: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-md"
-                required
-              />
-              <select
-                value={driveForm.coordinatorId}
-                onChange={(e) => setDriveForm({...driveForm, coordinatorId: e.target.value})}
-                className="px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Select Coordinator</option>
-                {coordinators.map(coord => (
-                  <option key={coord._id} value={coord._id}>{coord.name}</option>
-                ))}
-              </select>
+              <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                <input
+                  type="text"
+                  placeholder="Drive Name"
+                  value={driveForm.name}
+                  onChange={(e) => setDriveForm({...driveForm, name: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Coordinator Name"
+                  value={driveForm.coordinator.name}
+                  onChange={(e) => setDriveForm({...driveForm, coordinator: {...driveForm.coordinator, name: e.target.value}})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Gated Community"
+                  value={driveForm.gatedCommunity}
+                  onChange={(e) => setDriveForm({...driveForm, gatedCommunity: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+                <input
+                  type="tel"
+                  placeholder="Coordinator Phone"
+                  value={driveForm.coordinator.phone}
+                  onChange={(e) => setDriveForm({...driveForm, coordinator: {...driveForm.coordinator, phone: e.target.value}})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Location"
+                  value={driveForm.location}
+                  onChange={(e) => setDriveForm({...driveForm, location: e.target.value})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+                <input
+                  type="email"
+                  placeholder="Coordinator Email"
+                  value={driveForm.coordinator.email}
+                  onChange={(e) => setDriveForm({...driveForm, coordinator: {...driveForm.coordinator, email: e.target.value}})}
+                  className="px-3 py-2 border border-gray-300 rounded-md w-full max-w-xs"
+                  required
+                />
+              </div>
               <input
                 type="date"
                 value={driveForm.startDate}

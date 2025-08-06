@@ -30,28 +30,14 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 
-    const { 
-      name, 
-      description, 
-      location, 
-      gatedCommunity, 
-      coordinatorId, 
-      startDate, 
-      endDate 
-    } = req.body;
-
-    // Check if coordinator exists
-    const coordinator = await User.findById(coordinatorId);
-    if (!coordinator || coordinator.role !== 'coordinator') {
-      return res.status(400).json({ message: 'Invalid coordinator selected' });
-    }
+    const { name, description, location, gatedCommunity, coordinator, startDate, endDate } = req.body;
 
     const donationDrive = new BookDonationDrive({
       name,
       description,
       location,
       gatedCommunity,
-      coordinator: coordinatorId,
+      coordinator,
       administrator: req.user.userId,
       startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : null
@@ -62,7 +48,6 @@ router.post('/create', authenticateToken, async (req, res) => {
     res.status(201).json({
       message: 'Donation drive created successfully',
       donationDrive: await BookDonationDrive.findById(donationDrive._id)
-        .populate('coordinator', 'name email phone')
         .populate('administrator', 'name email')
     });
   } catch (error) {
