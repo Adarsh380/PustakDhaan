@@ -19,8 +19,6 @@ app.use('/api/drives', require('../server/routes/donationDrives'));
 app.use('/api/schools', require('../server/routes/schools'));
 app.use('/api/allocations', require('../server/routes/allocations'));
 app.use('/api/donor', require('../server/routes/donorAllocations'));
-// Add password reset route
-app.use('/api/reset-password', require('../server/routes/auth'));
 
 // MongoDB Connection (ensure only one connection is made in serverless)
 let isConnected = false;
