@@ -14,7 +14,6 @@ PustakDhaan is a comprehensive full-stack web application designed to manage boo
 
 ### 👥 User Roles
 - **Donors**: Contribute books to donation drives and track their donations
-- **Coordinators**: Manage local donation drives and coordinate with donors
 - **Administrators**: Oversee the entire system, create drives, manage schools, and allocate books
 
 ### 🏆 Badge System
