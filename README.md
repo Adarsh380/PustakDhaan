@@ -220,11 +220,6 @@ pustakdhaan/
 4. **Track Donations**: Monitor your donation history and impact
 5. **Earn Badges**: Achieve recognition through consistent donations
 
-### For Coordinators
-1. **Manage Drives**: Oversee assigned donation drives
-2. **Coordinate with Donors**: Facilitate book collection process
-3. **Track Progress**: Monitor drive progress and book collection
-
 ### For Administrators
 1. **Create Drives**: Set up new donation drives with coordinators
 2. **Manage Schools**: Add government schools as beneficiaries
@@ -271,7 +266,6 @@ pustakdhaan/
 ### Sample Data
 - **Admin User**: admin@pustakdhaan.com / password123
 - **Donor User**: donor@example.com / password123
-- **Coordinator User**: coordinator@example.com / password123
 
 ## Environment Variables
 
