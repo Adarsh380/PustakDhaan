@@ -10,9 +10,19 @@ router.post('/register', async (req, res) => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
     const { name, email, password, phone, address, role } = req.body;
+
     if (!['admin', 'donor'].includes(role)) {
       return res.status(400).json({ message: 'Role must be either admin or donor' });
     }
+
+    // If attempting to register as an admin, only allow when there is no admin in the system yet
+    if (role === 'admin') {
+      const adminExists = await User.exists({ role: 'admin' });
+      if (adminExists) {
+        return res.status(403).json({ message: 'An admin already exists. Only an existing admin can promote another user to admin.' });
+      }
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -198,6 +208,42 @@ router.post('/reset-password', async (req, res) => {
     res.json({ message: 'Password has been reset successfully' });
   } catch (error) {
     res.status(400).json({ message: 'Invalid or expired token' });
+  }
+});
+
+// Promote a user to admin (admin only)
+router.post('/promote', async (req, res) => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/pustakdhaan');
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) return res.status(401).json({ message: 'No token provided' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    const currentUser = await User.findById(decoded.userId);
+    if (!currentUser || currentUser.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    }
+
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: 'userId is required' });
+
+    const userToPromote = await User.findById(userId);
+    if (!userToPromote) return res.status(404).json({ message: 'User to promote not found' });
+    if (userToPromote.role === 'admin') return res.status(400).json({ message: 'User is already an admin' });
+
+    userToPromote.role = 'admin';
+    await userToPromote.save();
+
+    res.json({ message: 'User promoted to admin successfully' });
+  } catch (error) {
+    console.error('Promote error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

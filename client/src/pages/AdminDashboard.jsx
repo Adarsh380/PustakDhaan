@@ -18,6 +18,11 @@ function AdminDashboard() {
   const [schoolMessage, setSchoolMessage] = useState({ type: '', text: '' })
   const [allocationMessage, setAllocationMessage] = useState({ type: '', text: '' })
 
+  // Users & admin promotion state
+  const [users, setUsers] = useState([])
+  const [promoteMessage, setPromoteMessage] = useState({ type: '', text: '' })
+  const [promotingUserId, setPromotingUserId] = useState(null)
+
   // Form states
   const [driveForm, setDriveForm] = useState({
     name: '',
@@ -126,6 +131,7 @@ function AdminDashboard() {
       setDonations(donationsData)
       setSchools(schoolsData)
       setAllocations(allocationsData)
+      setUsers(usersData)
       setCoordinators(usersData.filter(user => user.role === 'coordinator'))
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -290,6 +296,34 @@ function AdminDashboard() {
     }
   }
 
+  // Promote a donor/user to admin (called from UI)
+  const handlePromote = async (userId) => {
+    setPromotingUserId(userId)
+    setPromoteMessage({ type: '', text: '' })
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/auth/promote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId })
+      })
+      const result = await res.json()
+      if (res.ok) {
+        setPromoteMessage({ type: 'success', text: result.message || 'User promoted to admin' })
+        await fetchData()
+      } else {
+        setPromoteMessage({ type: 'error', text: result.message || 'Failed to promote user' })
+      }
+    } catch (err) {
+      setPromoteMessage({ type: 'error', text: 'Failed to promote user' })
+    } finally {
+      setPromotingUserId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -319,6 +353,7 @@ function AdminDashboard() {
             { id: 'schools', label: 'Schools' },
             { id: 'allocations', label: 'Book Allocations' },
             { id: 'donations', label: 'Donations' }
+            ,{ id: 'users', label: 'Users' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -863,264 +898,45 @@ function AdminDashboard() {
         </div>
       )}
 
-      {activeTab === 'allocations' && (
-        <div className="space-y-8">
-      {/* Allocate Books Form */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Allocate Books to School</h2>
-        <form onSubmit={handleAllocateBooks} className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
-            <select
-              value={allocationForm.donationDriveId}
-              onChange={(e) => setAllocationForm({...allocationForm, donationDriveId: e.target.value, donorId: ''})}
-              className="px-3 py-2 border border-gray-300 rounded-md"
-              required
-            >
-              <option value="">Select Donation Drive</option>
-              {drives.map(drive => {
-                const allocatedFromDrive = allocations
-                  .filter(allocation => allocation.donationDrive._id === drive._id)
-                  .reduce((sum, allocation) => sum + allocation.totalBooksAllocated, 0);
-                const remainingBooks = Math.max(0, drive.totalBooksReceived - allocatedFromDrive);
-                return (
-                  <option key={drive._id} value={drive._id}>
-                    {drive.name} - Available: {remainingBooks} books
-                  </option>
-                );
-              })}
-            </select>
-
-            {/* Donor selection, shown only if drive is selected */}
-            <select
-              value={allocationForm.donorId}
-              onChange={e => setAllocationForm({...allocationForm, donorId: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-md"
-              required
-              disabled={!allocationForm.donationDriveId || donors.length === 0}
-            >
-              <option value="">{!allocationForm.donationDriveId ? 'Select drive first' : donors.length === 0 ? 'No donors found' : 'Select Donor'}</option>
-              {donors.map(donorObj => (
-                <option key={donorObj.donor._id} value={donorObj.donor._id}>
-                  {donorObj.donor.name}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={allocationForm.schoolId}
-              onChange={(e) => setAllocationForm({...allocationForm, schoolId: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-md"
-              required
-            >
-              <option value="">Select School</option>
-              {schools.map(school => (
-                <option key={school._id} value={school._id}>
-                  {school.name} - {school.address.city}
-                </option>
-              ))}
-            </select>
-          </div>
-
-              {/* Drive Details Section */}
-              {allocationForm.donationDriveId && (
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <h3 className="font-medium text-blue-800 mb-3">Selected Drive Details</h3>
-                  {(() => {
-                    const selectedDrive = drives.find(drive => drive._id === allocationForm.donationDriveId);
-                    if (!selectedDrive) return null;
-                    
-                    const allocatedFromDrive = allocations
-                      .filter(allocation => allocation.donationDrive._id === selectedDrive._id)
-                      .reduce((sum, allocation) => sum + allocation.totalBooksAllocated, 0);
-                    const remainingBooks = Math.max(0, selectedDrive.totalBooksReceived - allocatedFromDrive);
-                    
-                    return (
-                      <div className="grid md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <div className="space-y-2">
-                            <div><strong>Drive Name:</strong> {selectedDrive.name}</div>
-                            <div><strong>Location:</strong> {selectedDrive.location}</div>
-                            <div><strong>Total Books Received:</strong> {selectedDrive.totalBooksReceived}</div>
-                            <div><strong>Books Already Allocated:</strong> {allocatedFromDrive}</div>
-                            <div className="text-blue-700 font-semibold">
-                              <strong>Available for Allocation:</strong> {remainingBooks}
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <div className="font-medium text-blue-800 mb-2">Books Available by Age Category:</div>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {Object.entries(selectedDrive.booksReceived || {'2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0}).map(([category, count]) => {
-                              const allocatedInCategory = allocations
-                                .filter(allocation => allocation.donationDrive._id === selectedDrive._id)
-                                .reduce((sum, allocation) => sum + (allocation.booksAllocated[category] || 0), 0);
-                              const availableInCategory = Math.max(0, count - allocatedInCategory);
-                              
-                              return (
-                                <div key={category} className="bg-white p-2 rounded border">
-                                  <div className="font-medium">Age {category}:</div>
-                                  <div>Available: <span className="text-blue-700 font-semibold">{availableInCategory}</span></div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Donor Details and Books */}
-              {allocationForm.donorId && (() => {
-                const donorObj = donors.find(d => d.donor._id === allocationForm.donorId);
-                if (!donorObj) return null;
-                const { name, email, phone, address } = donorObj.donor;
-                return (
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
-                    <h3 className="font-medium text-green-800 mb-2">Selected Donor Details</h3>
-                    <div className="mb-3 text-sm">
-                      <div><strong>Name:</strong> {name}</div>
-                      <div><strong>Address:</strong> {address?.street || ''}{address?.street ? ', ' : ''}{address?.city || ''}{address?.city ? ', ' : ''}{address?.state || ''}{address?.state ? ', ' : ''}{address?.zipCode || ''}</div>
-                      <div><strong>Email:</strong> {email}</div>
-                      <div><strong>Phone:</strong> {phone}</div>
-                    </div>
-                    <h4 className="font-medium text-green-800 mb-2 mt-2">Books Donated by Selected Donor</h4>
-                    <div className="grid md:grid-cols-4 gap-4">
-                      {Object.entries(donorBooks).map(([category, count]) => (
-                        <div key={category} className="bg-white p-2 rounded border">
-                          <div className="font-medium">Age {category}:</div>
-                          <div>Available: <span className="text-green-700 font-semibold">{count}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-              <div>
-                <h3 className="font-medium mb-2">Books to Allocate by Age Category</h3>
-                <div className="grid md:grid-cols-4 gap-4">
-                  {Object.entries(allocationForm.booksAllocated).map(([category, count]) => (
-                    <div key={category}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Age {category} years
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={donorBooks[category] || 0}
-                        value={count === 0 ? '' : count}
-                        onChange={(e) => {
-                          let value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                          if (value > (donorBooks[category] || 0)) value = donorBooks[category] || 0;
-                          setAllocationForm({
-                            ...allocationForm,
-                            booksAllocated: {
-                              ...allocationForm.booksAllocated,
-                              [category]: isNaN(value) ? 0 : value
-                            }
-                          });
-                        }}
-                        onFocus={(e) => {
-                          if (e.target.value === '0') {
-                            e.target.select();
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes (Optional)
-                </label>
-                <textarea
-                  value={allocationForm.notes}
-                  onChange={(e) => setAllocationForm({...allocationForm, notes: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  rows="3"
-                  placeholder="Any special instructions or notes..."
-                />
-              </div>
-
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <div className="text-lg font-medium text-gray-800">
-                  Total Books to Allocate: {Object.values(allocationForm.booksAllocated).reduce((sum, count) => sum + count, 0)}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700"
-              >
-                Allocate Books
-              </button>
-              {allocationMessage.text && (
-                <div className={`mt-3 p-3 rounded-md ${
-                  allocationMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-800 border border-green-200' 
-                    : 'bg-red-50 text-red-800 border border-red-200'
-                }`}>
-                  {allocationMessage.text}
-                </div>
-              )}
-            </form>
-          </div>
-
-          {/* Allocations List */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Book Allocations</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Drive
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      School
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Books Allocated
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
+      {activeTab === 'users' && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4">Users</h2>
+          {promoteMessage.text && (
+            <div className={`mb-4 p-3 rounded-md ${promoteMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>{promoteMessage.text}</div>
+          )}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.map(user => (
+                  <tr key={user._id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {user.role === 'donor' ? (
+                        <button
+                          className={`bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 ${promotingUserId === user._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={promotingUserId === user._id}
+                          onClick={() => handlePromote(user._id)}
+                        >
+                          Promote to Admin
+                        </button>
+                      ) : user.role === 'admin' ? (
+                        <span className="text-green-700 font-semibold">Admin</span>
+                      ) : null}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {allocations.map(allocation => (
-                    <tr key={allocation._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {allocation.donationDrive.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {allocation.school.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          {Object.entries(allocation.booksAllocated).map(([category, count]) => (
-                            <div key={category} className="bg-gray-50 p-2 rounded border">
-                              <div className="font-medium">Age {category}:</div>
-                              <div><span className="text-gray-700 font-semibold">{count}</span> books</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-gray-200 font-semibold text-gray-800">
-                          Total: {allocation.totalBooksAllocated} books
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(allocation.allocationDate).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
