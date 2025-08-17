@@ -912,6 +912,8 @@ function AdminDashboard() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -921,6 +923,8 @@ function AdminDashboard() {
                   <tr key={user._id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.phone || '—'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.address ? `${user.address.street || ''}${user.address.street ? ', ' : ''}${user.address.city || ''}${user.address.city ? ', ' : ''}${user.address.state || ''}${user.address.zipCode ? ' - ' + user.address.zipCode : ''}` : '—'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{user.role}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user.role === 'donor' ? (

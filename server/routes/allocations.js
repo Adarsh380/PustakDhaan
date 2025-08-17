@@ -167,6 +167,12 @@ router.post('/allocate', authenticateToken, async (req, res) => {
         for (const k of Object.keys(donation.allocatedCount)) {
           donation.allocatedCount[k] = Number(donation.allocatedCount[k] || 0);
         }
+        // Determine if donation is now fully allocated
+        const totalAllocated = Object.values(donation.allocatedCount).reduce((s, n) => s + Number(n || 0), 0);
+        const totalDonated = Object.values(donation.booksCount || {}).reduce((s, n) => s + Number(n || 0), 0);
+        if (totalAllocated >= totalDonated && donation.status !== 'allocated') {
+          donation.status = 'allocated';
+        }
         await donation.save();
          if (donation.donor) donorIdsSet.add(donation.donor.toString());
        }

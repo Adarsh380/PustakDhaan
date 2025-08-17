@@ -154,9 +154,6 @@ router.put('/:id/status', authenticateToken, async (req, res) => {
     }
 
     donation.status = status;
-    if (status === 'collected') {
-      donation.collectedAt = new Date();
-    }
     await donation.save();
 
     res.json({

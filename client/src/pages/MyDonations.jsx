@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 function MyDonations() {
   const [donations, setDonations] = useState([])
   const [allocations, setAllocations] = useState([])
+  const [allocationSummary, setAllocationSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -47,7 +48,14 @@ function MyDonations() {
       })
       if (response.ok) {
         const data = await response.json()
-        setAllocations(data)
+        // support new shape { summary, allocations } and legacy array
+        if (data && data.allocations && data.summary) {
+          setAllocationSummary(data.summary)
+          setAllocations(data.allocations)
+        } else if (Array.isArray(data)) {
+          setAllocationSummary(null)
+          setAllocations(data)
+        }
       }
     } catch {}
   }
@@ -175,6 +183,17 @@ function MyDonations() {
           {allocations.length > 0 && (
             <div className="bg-blue-50 rounded-lg shadow-md p-6 mt-8">
               <h2 className="text-lg font-bold mb-2 text-blue-900">Where your donated books reached</h2>
+              {allocationSummary && (
+                <div className="mb-4 p-3 bg-white rounded border border-blue-100">
+                  <div className="text-sm text-blue-800 font-medium">Allocated summary</div>
+                  <div className="text-sm text-gray-700 mt-2">Total books allocated to schools: <span className="font-semibold">{allocationSummary.totalAllocated}</span></div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm text-gray-600">
+                    {Object.entries(allocationSummary.byCategory).map(([cat, count]) => (
+                      <div key={cat} className="inline-block">{cat}: <span className="font-semibold">{count}</span></div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <ul className="space-y-2">
                 {allocations.map((a, idx) => (
                   <li key={idx} className="flex flex-col md:flex-row md:items-center md:justify-between bg-white rounded p-3 border border-blue-100">
@@ -189,6 +208,7 @@ function MyDonations() {
                       {Object.entries(a.booksAllocated).map(([cat, count]) => (
                         <span key={cat} className="inline-block mr-2">{count} books (age {cat})</span>
                       ))}
+                      <div className="text-xs text-gray-500 mt-1">Total allocated: <span className="font-semibold">{a.totalBooksAllocated}</span></div>
                     </div>
                   </li>
                 ))}

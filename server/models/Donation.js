@@ -34,10 +34,9 @@ const donationRecordSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['submitted', 'collected', 'allocated'],
+    enum: ['submitted', 'allocated'],
     default: 'submitted'
   },
-  collectedAt: Date,
   notes: {
     type: String,
     trim: true
