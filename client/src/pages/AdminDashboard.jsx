@@ -49,34 +49,36 @@ function AdminDashboard() {
     donationDriveId: '',
     donorId: '',
     schoolId: '',
-    booksAllocated: { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 },
+    // use empty strings so inputs can be cleared by the user; convert to numbers during validation/submission
+    booksAllocated: { '2-4': '', '4-6': '', '6-8': '', '8-10': '' },
     notes: ''
   })
+  const fetchDonors = async (driveId) => {
+    if (!driveId) {
+      setDonors([]);
+      setAllocationForm(f => ({ ...f, donorId: '' }));
+      setDonorBooks({ '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 });
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/allocations/donors/by-drive/${driveId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDonors(data);
+      } else {
+        setDonors([]);
+      }
+    } catch (err) {
+      setDonors([]);
+    }
+  }
+
   // Fetch donors when a drive is selected
   useEffect(() => {
-    const fetchDonors = async () => {
-      if (!allocationForm.donationDriveId) {
-        setDonors([]);
-        setAllocationForm(f => ({ ...f, donorId: '' }));
-        setDonorBooks({ '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 });
-        return;
-      }
-      try {
-        const token = localStorage.getItem('token');
-        const res = await fetch(`/api/allocations/donors/by-drive/${allocationForm.donationDriveId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setDonors(data);
-        } else {
-          setDonors([]);
-        }
-      } catch (err) {
-        setDonors([]);
-      }
-    };
-    fetchDonors();
+    fetchDonors(allocationForm.donationDriveId);
   }, [allocationForm.donationDriveId]);
 
   // Update donorBooks when donor is selected
@@ -220,7 +222,8 @@ function AdminDashboard() {
       setAllocationMessage({ type: 'error', text: 'Please select a donor.' });
       return;
     }
-    const requestedTotal = Object.values(allocationForm.booksAllocated).reduce((sum, count) => sum + count, 0);
+    // convert allocation values (which may be empty strings) to numbers for validation
+    const requestedTotal = Object.values(allocationForm.booksAllocated).reduce((sum, count) => sum + (Number(count) || 0), 0);
     const donorTotal = Object.values(donorBooks).reduce((sum, count) => sum + count, 0);
     if (requestedTotal > donorTotal) {
       setAllocationMessage({
@@ -230,11 +233,12 @@ function AdminDashboard() {
       return;
     }
     for (const [category, requestedCount] of Object.entries(allocationForm.booksAllocated)) {
+      const requestedNum = Number(requestedCount) || 0;
       const available = donorBooks[category] || 0;
-      if (requestedCount > available) {
+      if (requestedNum > available) {
         setAllocationMessage({
           type: 'error',
-          text: `Cannot allocate ${requestedCount} books for age ${category}. Only ${available} books available from this donor in this category.`
+          text: `Cannot allocate ${requestedNum} books for age ${category}. Only ${available} books available from this donor in this category.`
         });
         return;
       }
@@ -253,14 +257,12 @@ function AdminDashboard() {
 
       if (response.ok) {
         setAllocationMessage({ type: 'success', text: 'Books allocated successfully!' })
-        setAllocationForm({
-          donationDriveId: '',
-          donorId: '',
-          schoolId: '',
-          booksAllocated: { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 },
-          notes: ''
-        })
-        fetchData()
+        // Refresh donors for the current drive so available counts update
+        const currentDriveId = allocationForm.donationDriveId;
+        await fetchDonors(currentDriveId);
+        // clear only the allocation numbers and notes, keep selected drive/donor so UI stays focused and counts update
+        setAllocationForm(f => ({ ...f, booksAllocated: { '2-4': '', '4-6': '', '6-8': '', '8-10': '' }, notes: '' }))
+        await fetchData()
       } else {
         const error = await response.json()
         setAllocationMessage({ type: 'error', text: error.message || 'Failed to allocate books' })
@@ -937,6 +939,124 @@ function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'allocations' && (
+        <div className="space-y-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Create Book Allocation</h2>
+            <form onSubmit={handleAllocateBooks} className="grid md:grid-cols-2 gap-4">
+              <select
+                value={allocationForm.donationDriveId}
+                onChange={(e) => setAllocationForm({ ...allocationForm, donationDriveId: e.target.value, donorId: '' })}
+                className="px-3 py-2 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="">Select Donation Drive</option>
+                {drives.map(drive => (
+                  <option key={drive._id} value={drive._id}>{drive.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={allocationForm.donorId}
+                onChange={(e) => setAllocationForm({ ...allocationForm, donorId: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-md"
+                required
+                disabled={!allocationForm.donationDriveId}
+              >
+                <option value="">Select Donor</option>
+                {donors.map(d => (
+                  <option key={d.donor._id} value={d.donor._id}>{d.donor.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={allocationForm.schoolId}
+                onChange={(e) => setAllocationForm({ ...allocationForm, schoolId: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="">Select School</option>
+                {schools.map(s => (
+                  <option key={s._id} value={s._id}>{s.name}</option>
+                ))}
+              </select>
+
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                {Object.keys(allocationForm.booksAllocated).map(cat => (
+                  <div key={cat} className="flex flex-col">
+                    <label className="text-xs text-gray-500 mb-1">{cat} (available: {donorBooks[cat] || 0})</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={allocationForm.booksAllocated[cat] ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        // allow empty string so the user can clear the field; store numeric strings otherwise
+                        setAllocationForm({ ...allocationForm, booksAllocated: { ...allocationForm.booksAllocated, [cat]: v === '' ? '' : v } })
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-md"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <textarea
+                placeholder="Notes (optional)"
+                value={allocationForm.notes}
+                onChange={(e) => setAllocationForm({ ...allocationForm, notes: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-md md:col-span-2"
+                rows={2}
+              />
+
+              <div className="md:col-span-2 flex gap-2 mt-2">
+                <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Allocate Books</button>
+                <button type="button" onClick={() => setAllocationForm({ donationDriveId: '', donorId: '', schoolId: '', booksAllocated: { '2-4': '', '4-6': '', '6-8': '', '8-10': '' }, notes: '' })} className="bg-gray-200 px-4 py-2 rounded-md">Reset</button>
+              </div>
+
+              {allocationMessage.text && (
+                <div className={`mt-3 p-3 rounded-md md:col-span-2 ${allocationMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>{allocationMessage.text}</div>
+              )}
+            </form>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Existing Allocations</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drive</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Donor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">School</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Books Allocated</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {allocations.length === 0 ? (
+                    <tr><td colSpan={5} className="px-6 py-4 text-sm text-gray-500">No allocations yet.</td></tr>
+                  ) : (
+                    allocations.map(a => (
+                      <tr key={a._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{a.donationDrive?.name || a.donationDriveName || '—'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{
+                          (a.donationsUsed && a.donationsUsed.length) ?
+                            Array.from(new Set(a.donationsUsed.map(d => d.donor?.name).filter(Boolean))).join(', ') :
+                            '—'
+                        }</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{a.school?.name || '—'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{Object.entries(a.booksAllocated || {}).map(([k,v]) => `${k}: ${v}`).join(', ')}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

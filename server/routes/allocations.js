@@ -68,6 +68,7 @@ router.post('/allocate', authenticateToken, async (req, res) => {
 
     const { 
       donationDriveId, 
+      donorId,
       schoolId, 
       booksAllocated, 
       notes 
@@ -79,121 +80,124 @@ router.post('/allocate', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Donation drive not found' });
     }
 
+    // Validate donor
+    if (!donorId) {
+      return res.status(400).json({ message: 'Donor must be selected for allocation' });
+    }
+    const donorUser = await User.findById(donorId);
+    if (!donorUser) {
+      return res.status(404).json({ message: 'Donor not found' });
+    }
+
     // Validate school
     const school = await School.findById(schoolId);
     if (!school) {
       return res.status(404).json({ message: 'School not found' });
     }
 
-    // Check if enough books are available
-    const totalAllocated = Object.values(booksAllocated).reduce((sum, count) => sum + count, 0);
+    // Coerce booksAllocated values to numbers
+    const booksAllocatedNum = {};
+    for (const cat of ['2-4','4-6','6-8','8-10']) {
+      booksAllocatedNum[cat] = Number(booksAllocated?.[cat]) || 0;
+    }
+
+    // Check at least one book requested
+    const totalAllocated = Object.values(booksAllocatedNum).reduce((sum, n) => sum + n, 0);
     if (totalAllocated === 0) {
       return res.status(400).json({ message: 'At least one book must be allocated' });
     }
 
-    // Calculate total allocated so far for this drive
-    const allocations = await BookAllocation.find({ donationDrive: donationDriveId });
-    const allocatedSoFar = { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-    allocations.forEach(a => {
-      for (const cat of Object.keys(allocatedSoFar)) {
-        allocatedSoFar[cat] += a.booksAllocated[cat] || 0;
-      }
-    });
-
-    // Check availability for each category
-    for (const category in booksAllocated) {
-      const available = (donationDrive.booksReceived[category] || 0) - (allocatedSoFar[category] || 0);
-      if (booksAllocated[category] > available) {
-        return res.status(400).json({
-          message: `Not enough books in category ${category}. Available: ${available}, Requested: ${booksAllocated[category]}`
-        });
-      }
-    }
-
-    // Find donation records for this drive, sorted by donor and oldest first
-    const donationRecords = await DonationRecord.find({
+    // Fetch this donor's donation records for the drive (oldest first)
+    const donorDonationRecords = await DonationRecord.find({
       donationDrive: donationDriveId,
+      donor: donorId,
       status: { $in: ['submitted', 'collected'] }
     }).sort({ donationDate: 1 });
 
-    // Track which donations are used for this allocation
+    // Compute donor availability per category
+    const donorAvailable = { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+    donorDonationRecords.forEach(donation => {
+      for (const cat of Object.keys(donorAvailable)) {
+        const total = Number(donation.booksCount?.[cat] || 0);
+        const allocated = Number(donation.allocatedCount?.[cat] || 0);
+        donorAvailable[cat] += total - allocated;
+      }
+    });
+
+    // Validate requested against donor availability
+    for (const category in booksAllocatedNum) {
+      const requested = booksAllocatedNum[category] || 0;
+      const available = donorAvailable[category] || 0;
+      if (requested > available) {
+        return res.status(400).json({ message: `Not enough books from this donor in category ${category}. Available: ${available}, Requested: ${requested}` });
+      }
+    }
+
+    // Allocate from this donor's donations (FIFO)
     const donationsUsed = [];
-    const booksToAllocate = { ...booksAllocated };
     const booksAllocatedFromDonations = { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
 
-    // For each category, allocate from donations in FIFO order
-    for (const category of Object.keys(booksToAllocate)) {
-      let needed = booksToAllocate[category];
-      for (const donation of donationRecords) {
+    for (const category of Object.keys(booksAllocatedNum)) {
+      let needed = booksAllocatedNum[category];
+      for (const donation of donorDonationRecords) {
         if (needed <= 0) break;
-        const available = donation.booksCount[category] - (donation.allocatedCount?.[category] || 0);
+        const available = Number(donation.booksCount?.[category] || 0) - Number(donation.allocatedCount?.[category] || 0);
         if (available > 0) {
           const take = Math.min(needed, available);
-          // Track allocation per donation
           donation.allocatedCount = donation.allocatedCount || { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
-          donation.allocatedCount[category] += take;
-          needed -= take;
-          booksAllocatedFromDonations[category] += take;
-          if (!donationsUsed.includes(donation._id)) {
-            donationsUsed.push(donation._id);
-          }
-        }
-      }
-      if (needed > 0) {
-        return res.status(400).json({ message: `Not enough donated books in category ${category} to allocate.` });
-      }
-    }
+          // coerce existing allocated value to number before adding to avoid string concatenation
+          donation.allocatedCount[category] = Number(donation.allocatedCount[category] || 0) + take;
+           needed -= take;
+           booksAllocatedFromDonations[category] += take;
+           if (!donationsUsed.includes(donation._id)) donationsUsed.push(donation._id);
+         }
+       }
+       if (needed > 0) {
+         return res.status(400).json({ message: `Not enough donated books in category ${category} to allocate from this donor.` });
+       }
+     }
 
-    // Save updated allocatedCount for each used donation
-
-    // Save updated allocatedCount for each used donation
-    // Also, collect unique donor IDs from the used donations
-    const donorIdsSet = new Set();
-    for (const donationId of donationsUsed) {
-      const donation = donationRecords.find(d => d._id.equals(donationId));
-      if (donation) {
-        // Ensure allocatedCount is always present and up-to-date
+     // Save updated allocatedCount for each used donation and gather donor IDs
+     const donorIdsSet = new Set();
+     for (const donationId of donationsUsed) {
+       const donation = donorDonationRecords.find(d => d._id.equals(donationId));
+       if (donation) {
         donation.allocatedCount = donation.allocatedCount || { '2-4': 0, '4-6': 0, '6-8': 0, '8-10': 0 };
+        // ensure all allocatedCount entries are numbers
+        for (const k of Object.keys(donation.allocatedCount)) {
+          donation.allocatedCount[k] = Number(donation.allocatedCount[k] || 0);
+        }
         await donation.save();
-        if (donation.donor) {
-          donorIdsSet.add(donation.donor.toString());
-        }
-      }
-    }
+         if (donation.donor) donorIdsSet.add(donation.donor.toString());
+       }
+     }
 
-    // For each donor whose books were allocated, recalculate totalBooksDonatted and update badge
-    for (const donorId of donorIdsSet) {
-      // Sum all books allocated from this donor's donations
-      const donorDonations = await DonationRecord.find({ donor: donorId });
-      let totalAllocated = 0;
-      for (const d of donorDonations) {
-        if (d.allocatedCount) {
-          totalAllocated += Object.values(d.allocatedCount).reduce((sum, n) => sum + (n || 0), 0);
-        }
-      }
-      const donor = await User.findById(donorId);
-      if (donor) {
-        donor.totalBooksDonatted = totalAllocated;
-        donor.updateBadge();
-        await donor.save();
-      }
-    }
+     // Update donor summary fields
+     for (const donorIdToUpdate of donorIdsSet) {
+       const donorDonations = await DonationRecord.find({ donor: donorIdToUpdate });
+       let totalAllocatedForDonor = 0;
+       for (const d of donorDonations) {
+        if (d.allocatedCount) totalAllocatedForDonor += Object.values(d.allocatedCount).reduce((s, n) => s + Number(n || 0), 0);
+       }
+       const donor = await User.findById(donorIdToUpdate);
+       if (donor) {
+         donor.totalBooksDonatted = totalAllocatedForDonor;
+         donor.updateBadge();
+         await donor.save();
+       }
+     }
 
     const allocation = new BookAllocation({
       donationDrive: donationDriveId,
       school: schoolId,
       allocatedBy: req.user.userId,
-      booksAllocated,
+      booksAllocated: booksAllocatedNum,
       totalBooksAllocated: totalAllocated,
       notes,
       donationsUsed
     });
 
     await allocation.save();
-
-
-    // Do NOT decrement booksReceived or totalBooksReceived; they represent total donations.
-    // Available books = booksReceived - sum(allocated)
 
     // Update school total books received
     school.totalBooksReceived += totalAllocated;
@@ -229,6 +233,7 @@ router.get('/all', authenticateToken, async (req, res) => {
       .populate('donationDrive', 'name location gatedCommunity')
       .populate('school', 'name address')
       .populate('allocatedBy', 'name email')
+      .populate({ path: 'donationsUsed', populate: { path: 'donor', select: 'name email phone' } })
       .sort({ createdAt: -1 });
 
     res.json(allocations);
@@ -250,6 +255,7 @@ router.get('/by-drive/:driveId', authenticateToken, async (req, res) => {
     const allocations = await BookAllocation.find({ donationDrive: req.params.driveId })
       .populate('school', 'name address')
       .populate('allocatedBy', 'name email')
+      .populate({ path: 'donationsUsed', populate: { path: 'donor', select: 'name email phone' } })
       .sort({ createdAt: -1 });
 
     res.json(allocations);
